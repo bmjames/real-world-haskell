@@ -1,18 +1,30 @@
 module PrettyJSON (renderJValue) where
 
 import Numeric (showHex)
-import Data.Char (ord)
 import Data.Bits (shiftR, (.&.))
+import Data.Char (ord)
+import Data.List (intercalate)
 
 import SimpleJSON
-import PrettyStub
+import Prettify
 
 renderJValue :: JValue -> Doc
+
 renderJValue (JBool True)  = text "true"
 renderJValue (JBool False) = text "false"
-renderJValue (JNull)       = text "null"
+renderJValue JNull         = text "null"
 renderJValue (JNumber num) = double num
 renderJValue (JString str) = string str
+
+renderJValue (JObject o) = series '{' '}' field o
+  where field (name,val) = string name
+                           <> text ": "
+                           <> renderJValue val
+
+renderJValue (JArray a) = series '[' ']' renderJValue a
+
+string :: String -> Doc
+string = enclose '"' '"' . hcat . map oneChar
 
 oneChar :: Char -> Doc
 oneChar c = case lookup c simpleEscapes of
@@ -39,3 +51,8 @@ astral :: Int -> Doc
 astral n = smallHex (a + 0xd800) <> smallHex (b + 0xdc00)
   where a = (n `shiftR` 10) .&. 0x3ff
         b = n .&. 0x3ff
+
+series :: Char -> Char -> (a -> Doc) -> [a] -> Doc
+series open close item = enclose open close
+                       . fsep . punctuate (char ',') . map item
+
