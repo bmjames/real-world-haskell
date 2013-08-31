@@ -11,7 +11,7 @@ import System.FilePath     ((</>))
 
 listDirectory :: FilePath -> MaybeT IO [FilePath]
 listDirectory dir = do
-  isDir    <- liftIO (doesDirectoryExist dir)
+  isDir    <- liftIO $ doesDirectoryExist dir
   guard isDir
   contents <- liftIO $ getDirectoryContents dir
   return $ filter notDots contents
