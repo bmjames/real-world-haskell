@@ -1,10 +1,10 @@
 module CountEntries where
 
-import Control.Monad       (join, guard, liftM2)
+import Control.Monad       (guard, liftM2, forM_, void, join)
 import Control.Monad.Trans (liftIO)
-import Control.Monad.Trans.Maybe (MaybeT)
+import Control.Monad.Trans.Maybe (MaybeT, runMaybeT)
 import Data.Function       (on)
-import Data.Traversable    (traverse)
+import Data.Maybe          (catMaybes)
 import System.Directory    (doesDirectoryExist, getDirectoryContents)
 import System.FilePath     ((</>))
 
@@ -19,6 +19,14 @@ listDirectory dir = do
 
 countEntries :: FilePath -> MaybeT IO [(FilePath, Int)]
 countEntries path = do
-  contents <- listDirectory path
-  rest     <- traverse (countEntries . (path </>)) contents
-  return $ (path, length contents) : join rest
+  contents  <- listDirectory path
+  children  <- liftIO $ catMaybeTs $ map (countEntries . (path </>)) contents
+  return $ (path, length contents) : join children
+
+catMaybeTs :: (Functor f, Monad f) => [MaybeT f a] -> f [a]
+catMaybeTs = fmap catMaybes . mapM runMaybeT
+
+printEntries :: FilePath -> IO ()
+printEntries path = void $ runMaybeT $ do
+  entries <- countEntries path
+  forM_ entries $ liftIO . print
